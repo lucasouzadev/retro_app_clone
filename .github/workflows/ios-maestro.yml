@@ -82,7 +82,13 @@ jobs:
           )
           PY
           xcrun simctl addmedia "$device" "$RUNNER_TEMP/lembranca.png"
+      - name: Capture the app before Maestro
+        run: |
+          xcrun simctl launch "$DIARIO_DEVICE" local.diariosemanal.app
+          sleep 5
+          xcrun simctl io "$DIARIO_DEVICE" screenshot artifacts/00-app-aberto.png
       - name: Test the weekly diary
+        timeout-minutes: 8
         run: |
           maestro --device "$DIARIO_DEVICE" test \
             --debug-output artifacts/maestro \
