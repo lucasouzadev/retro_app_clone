@@ -37,6 +37,9 @@ struct DiaryHome: View {
                 page("Diário semanal") { profile }
             }
         }
+        #if DEBUG
+        .task { prepareScreenshot() }
+        #endif
         .tint(DiaryPalette.accent)
         .sheet(isPresented: Binding(
             get: { draftWeek != nil },
@@ -75,6 +78,33 @@ struct DiaryHome: View {
             }
         }
     }
+
+    #if DEBUG
+    private func prepareScreenshot() {
+        guard let screen = UserDefaults.standard.string(forKey: "DiaryScreenshot"),
+              viewer == nil, let person = diary.people.first else { return }
+        let week = DiaryState.weekStart(for: .now)
+        diary.request(from: "caio", to: person.id)
+        if let invitation = diary.friendships.first {
+            diary.accept(invitation.id, as: person.id)
+        }
+        diary.request(from: "noa", to: person.id)
+        let fixture = URL.documentsDirectory.appendingPathComponent("screenshot-fixture.png")
+        if let photo = try? Data(contentsOf: fixture) {
+            diary.memories = [person.id, "caio"].map {
+                Memory(id: UUID(), owner: $0, week: week, published: .now, photo: photo)
+            }
+        }
+        viewer = person
+        switch screen {
+        case "journal": tab = 1
+        case "friends": tab = 2
+        case "publish": draftWeek = week
+        case "viewer": openMemory = diary.feed(for: person.id).first
+        default: break
+        }
+    }
+    #endif
 
     private func page<Content: View>(_ title: String, @ViewBuilder content: () -> Content) -> some View {
         NavigationStack {

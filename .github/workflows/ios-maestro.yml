@@ -1,6 +1,10 @@
 name: iOS simulator and Maestro
 on:
   workflow_dispatch:
+    inputs:
+      screenshots_only:
+        type: boolean
+        default: false
 
 permissions:
   contents: read
@@ -87,7 +91,20 @@ jobs:
           xcrun simctl launch "$DIARIO_DEVICE" local.diariosemanal.app
           sleep 5
           xcrun simctl io "$DIARIO_DEVICE" screenshot artifacts/00-app-aberto.png
+      - name: Capture remaining screens
+        if: inputs.screenshots_only
+        run: |
+          app_id=local.diariosemanal.app
+          container=$(xcrun simctl get_app_container "$DIARIO_DEVICE" "$app_id" data)
+          mkdir -p "$container/Documents"
+          cp "$RUNNER_TEMP/lembranca.png" "$container/Documents/screenshot-fixture.png"
+          for screen in feed journal friends publish viewer; do
+            xcrun simctl launch --terminate-running-process "$DIARIO_DEVICE" "$app_id" -DiaryScreenshot "$screen"
+            sleep 4
+            xcrun simctl io "$DIARIO_DEVICE" screenshot "artifacts/$screen.png"
+          done
       - name: Test the weekly diary
+        if: "!inputs.screenshots_only"
         timeout-minutes: 8
         run: |
           maestro --device "$DIARIO_DEVICE" test \
