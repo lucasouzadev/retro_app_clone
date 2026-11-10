@@ -51,7 +51,7 @@ jobs:
           echo "DIARIO_DEVICE=$device" >> "$GITHUB_ENV"
           xcrun simctl boot "$device"
           xcrun simctl bootstatus "$device" -b
-          xcrun simctl status_bar "$device" override --time 9:41 --batteryState unplugged --batteryLevel 100
+          xcrun simctl status_bar "$device" override --time 9:41 --batteryState discharging --batteryLevel 100
           xcrun simctl install "$device" "$DIARIO_APP"
           python3 - "$RUNNER_TEMP/lembranca.png" <<'PY'
           import struct

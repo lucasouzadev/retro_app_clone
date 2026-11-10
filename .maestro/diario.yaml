@@ -23,7 +23,7 @@ appId: local.diariosemanal.app
 # A biblioteca do simulador tem apenas a imagem sintética criada pelo workflow.
 # A primeira execução confirma a posição da primeira célula no seletor nativo.
 - extendedWaitUntil:
-    visible: "Fotos"
+    visible: "Photos|Fotos"
     timeout: 10000
 - tapOn:
     point: "15%,31%"
