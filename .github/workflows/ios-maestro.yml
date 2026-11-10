@@ -99,8 +99,10 @@ jobs:
           mkdir -p "$container/Documents"
           cp "$RUNNER_TEMP/lembranca.png" "$container/Documents/screenshot-fixture.png"
           for screen in feed journal friends publish viewer; do
-            xcrun simctl launch --terminate-running-process "$DIARIO_DEVICE" "$app_id" -DiaryScreenshot "$screen"
-            sleep 4
+            xcrun simctl terminate "$DIARIO_DEVICE" "$app_id" || true
+            sleep 3
+            xcrun simctl launch "$DIARIO_DEVICE" "$app_id" -DiaryScreenshot "$screen"
+            sleep 18
             xcrun simctl io "$DIARIO_DEVICE" screenshot "artifacts/$screen.png"
           done
       - name: Test the weekly diary
