@@ -25,6 +25,9 @@ enum DiaryLayout {
     static let gutter: CGFloat = 16
     static let cardSpacing: CGFloat = 12
     static let cardRadius: CGFloat = 20
+    static let calendarGap: CGFloat = 4
+    static let calendarWidth: CGFloat = 72
+    static let calendarHeight: CGFloat = 92
     static let sectionSpacing: CGFloat = 24
     static let maxContent: CGFloat = 520
     static let minimumTarget: CGFloat = 44

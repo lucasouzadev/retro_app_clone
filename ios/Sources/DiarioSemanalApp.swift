@@ -26,10 +26,10 @@ struct DiaryHome: View {
         Group {
             if let viewer {
                 TabView(selection: $tab) {
-                    page("Amigos na semana") { feed(viewer) }
-                        .tabItem { Label("Novidades", systemImage: "rectangle.stack") }.tag(0)
+                    page("Semana " + weekNumber(for: .now)) { feed(viewer) }
+                        .tabItem { Label("Novidades", systemImage: "house") }.tag(0)
                     page("Meu diário") { journal(viewer) }
-                        .tabItem { Label("Diário", systemImage: "book") }.tag(1)
+                        .tabItem { Label("Diário", systemImage: "person.crop.circle") }.tag(1)
                     page("Amigos") { friends(viewer) }
                         .tabItem { Label("Amigos", systemImage: "person.2") }.tag(2)
                 }
@@ -79,14 +79,19 @@ struct DiaryHome: View {
     private func page<Content: View>(_ title: String, @ViewBuilder content: () -> Content) -> some View {
         NavigationStack {
             ScrollView {
-                VStack(alignment: .leading, spacing: DiaryLayout.sectionSpacing, content: content)
+                VStack(alignment: .leading, spacing: DiaryLayout.sectionSpacing) {
+                    Text(title)
+                        .font(.system(.largeTitle, design: .serif, weight: .bold))
+                        .accessibilityAddTraits(.isHeader)
+                    content()
+                }
                     .padding(DiaryLayout.gutter)
                     .frame(maxWidth: DiaryLayout.maxContent)
                     .frame(maxWidth: .infinity)
             }
             .background(DiaryPalette.bg.ignoresSafeArea())
             .foregroundStyle(DiaryPalette.text)
-            .navigationTitle(title)
+            .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 if viewer != nil {
                     Button("Trocar perfil") {
@@ -136,7 +141,9 @@ struct DiaryHome: View {
 
     @ViewBuilder
     private func feed(_ person: Person) -> some View {
+        let week = DiaryState.weekStart(for: .now)
         let items = diary.feed(for: person.id)
+        weekStrip(week, allowAdding: true)
         if items.isEmpty {
             DiaryFeedback(title: "A semana começa aqui",
                           detail: "As fotos dos seus amigos aparecem quando eles publicarem.")
@@ -156,6 +163,7 @@ struct DiaryHome: View {
         return Group {
             DiaryCard {
                 DiaryWeekHeading(title: "Esta semana", range: weekLabel(week))
+                weekStrip(week, allowAdding: false)
                 if items.isEmpty {
                     DiaryFeedback(title: "Seu diário está em branco",
                                   detail: "Escolha uma foto para começar a guardar suas semanas.")
@@ -165,7 +173,8 @@ struct DiaryHome: View {
             }
             ForEach(Array(Set(items.map(\.week))).filter { $0 != week }.sorted(by: >), id: \.self) { past in
                 DiaryCard {
-                    DiaryWeekHeading(title: "Semana anterior", range: weekLabel(past))
+                    DiaryWeekHeading(title: "Semana " + weekNumber(for: past), range: weekLabel(past))
+                    weekStrip(past, allowAdding: false)
                     ForEach(items.filter { $0.week == past }.reversed()) { tile($0) }
                 }
             }
@@ -214,6 +223,46 @@ struct DiaryHome: View {
         }
     }
 
+    private func weekStrip(_ week: Date, allowAdding: Bool) -> some View {
+        ScrollView(.horizontal) {
+            HStack(spacing: DiaryLayout.calendarGap) {
+                if allowAdding {
+                    Button {
+                        draftWeek = week
+                    } label: {
+                        Image(systemName: "plus")
+                            .font(.title2.weight(.semibold))
+                            .frame(width: DiaryLayout.calendarWidth, height: DiaryLayout.calendarHeight)
+                            .background(DiaryPalette.surface)
+                    }
+                    .buttonStyle(.plain)
+                    .accessibilityLabel("Adicionar lembrança")
+                }
+                ForEach(0..<7) { offset in
+                    if let date = Calendar.current.date(byAdding: .day, value: offset, to: week) {
+                        VStack(spacing: DiaryLayout.calendarGap) {
+                            Text(date.formatted(.dateTime.month(.abbreviated)))
+                                .font(.caption)
+                            Text(date.formatted(.dateTime.day()))
+                                .font(.title2.monospacedDigit().weight(.semibold))
+                            Text(date.formatted(.dateTime.weekday(.abbreviated)))
+                                .font(.caption)
+                        }
+                        .frame(width: DiaryLayout.calendarWidth, height: DiaryLayout.calendarHeight)
+                        .foregroundStyle(DiaryPalette.textMuted)
+                        .background(DiaryPalette.bg)
+                        .accessibilityElement(children: .ignore)
+                        .accessibilityLabel(date.formatted(date: .complete, time: .omitted))
+                    }
+                }
+            }
+            .padding(DiaryLayout.calendarGap)
+        }
+        .background(DiaryPalette.border)
+        .clipShape(RoundedRectangle(cornerRadius: DiaryLayout.cardRadius))
+        .scrollIndicators(.hidden)
+    }
+
     private func authorHeading(_ memory: Memory) -> some View {
         let name = personName(memory.owner)
         let initials = name.split(separator: " ").prefix(2).compactMap(\.first)
@@ -238,6 +287,10 @@ struct DiaryHome: View {
     private func personName(_ id: String) -> String {
         diary.people.first(where: { $0.id == id })?.name ?? id
     }
+}
+
+private func weekNumber(for date: Date) -> String {
+    String(Calendar(identifier: .iso8601).component(.weekOfYear, from: date))
 }
 
 private func weekLabel(_ start: Date) -> String {
