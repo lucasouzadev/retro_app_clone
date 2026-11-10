@@ -1,0 +1,17 @@
+name: DiarioSemanal
+options:
+  deploymentTarget:
+    iOS: "17.0"
+targets:
+  DiarioSemanal:
+    type: application
+    platform: iOS
+    sources:
+      - Sources
+      - ../replica/design/DiaryCatalog.swift
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: local.diariosemanal.app
+        GENERATE_INFOPLIST_FILE: YES
+        INFOPLIST_KEY_CFBundleDisplayName: Diário Semanal
+        INFOPLIST_KEY_UILaunchScreen_Generation: YES

@@ -1,0 +1,101 @@
+name: iOS simulator and Maestro
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  simulator:
+    runs-on: macos-15
+    timeout-minutes: 35
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: "17"
+      - name: Install tools
+        run: |
+          brew install xcodegen
+          curl -fsSL https://get.maestro.mobile.dev | bash
+          echo "$HOME/.maestro/bin" >> "$GITHUB_PATH"
+      - name: Build for iOS Simulator
+        run: |
+          mkdir -p artifacts
+          xcodegen generate --spec ios/project.yml
+          xcodebuild -project ios/DiarioSemanal.xcodeproj -scheme DiarioSemanal \
+            -configuration Debug -destination 'generic/platform=iOS Simulator' \
+            -derivedDataPath "$RUNNER_TEMP/diario-build" CODE_SIGNING_ALLOWED=NO \
+            build 2>&1 | tee artifacts/xcodebuild.log
+          app="$RUNNER_TEMP/diario-build/Build/Products/Debug-iphonesimulator/DiarioSemanal.app"
+          test -d "$app"
+          ditto -c -k --keepParent "$app" artifacts/DiarioSemanal-simulator.zip
+          echo "DIARIO_APP=$app" >> "$GITHUB_ENV"
+      - name: Boot simulator and seed a synthetic photo
+        run: |
+          device=$(xcrun simctl list devices available -j | python3 -c '
+          import json, sys
+          devices = json.load(sys.stdin)["devices"]
+          for runtime in reversed(sorted(devices)):
+              if ".iOS-" not in runtime:
+                  continue
+              for device in devices[runtime]:
+                  if device["name"].startswith("iPhone"):
+                      print(device["udid"])
+                      sys.exit(0)
+          sys.exit("No available iPhone simulator")')
+          echo "DIARIO_DEVICE=$device" >> "$GITHUB_ENV"
+          xcrun simctl boot "$device"
+          xcrun simctl bootstatus "$device" -b
+          xcrun simctl status_bar "$device" override --time 9:41 --batteryState unplugged --batteryLevel 100
+          xcrun simctl install "$device" "$DIARIO_APP"
+          python3 - "$RUNNER_TEMP/lembranca.png" <<'PY'
+          import struct
+          import sys
+          import zlib
+          from pathlib import Path
+
+          width, height = 480, 320
+          pixels = bytearray()
+          for y in range(height):
+              pixels.append(0)
+              for x in range(width):
+                  if (x - 350) ** 2 + (y - 85) ** 2 < 38 ** 2:
+                      color = (255, 205, 125)
+                  elif y > 196 + 25 * ((x // 55) % 2):
+                      color = (55, 100, 93)
+                  else:
+                      color = (110 + y // 3, 155 + y // 6, 188)
+                  pixels.extend(color)
+          def chunk(kind, data):
+              return (struct.pack(">I", len(data)) + kind + data
+                      + struct.pack(">I", zlib.crc32(kind + data)))
+
+          header = struct.pack(">IIBBBBB", width, height, 8, 2, 0, 0, 0)
+          Path(sys.argv[1]).write_bytes(
+              b"\x89PNG\r\n\x1a\n" + chunk(b"IHDR", header)
+              + chunk(b"IDAT", zlib.compress(pixels)) + chunk(b"IEND", b"")
+          )
+          PY
+          xcrun simctl addmedia "$device" "$RUNNER_TEMP/lembranca.png"
+      - name: Test the weekly diary
+        run: |
+          maestro --device "$DIARIO_DEVICE" test \
+            --debug-output artifacts/maestro \
+            --format junit --output artifacts/maestro.xml .maestro/diario.yaml
+      - name: Capture the final simulator state
+        if: always()
+        run: |
+          if [[ -n "${DIARIO_DEVICE:-}" ]]; then
+            xcrun simctl io "$DIARIO_DEVICE" screenshot artifacts/ultima-tela.png
+          fi
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: diario-ios-${{ github.run_id }}
+          path: artifacts/
+          retention-days: 14

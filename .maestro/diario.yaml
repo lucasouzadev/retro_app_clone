@@ -1,0 +1,47 @@
+appId: local.diariosemanal.app
+---
+- launchApp:
+    clearState: true
+- assertVisible: "Perfis de demonstração"
+- takeScreenshot: artifacts/01-perfis
+- tapOn: "Entrar como Lia Martins"
+- tapOn: "Amigos"
+- tapOn: "Buscar pelo identificador"
+- inputText: "caio"
+- tapOn: "Convidar Caio Lima"
+- tapOn: "Trocar perfil"
+- tapOn: "Entrar como Caio Lima"
+- tapOn: "Amigos"
+- assertVisible: "Pedido recebido"
+- takeScreenshot: artifacts/02-pedido
+- tapOn: "Aceitar pedido de Lia Martins"
+- tapOn: "Trocar perfil"
+- tapOn: "Entrar como Lia Martins"
+- tapOn: "Diário"
+- tapOn: "Adicionar lembrança"
+- tapOn: "Escolher foto"
+# A biblioteca do simulador tem apenas a imagem sintética criada pelo workflow.
+# A primeira execução confirma a posição da primeira célula no seletor nativo.
+- extendedWaitUntil:
+    visible: "Fotos"
+    timeout: 10000
+- tapOn:
+    point: "15%,31%"
+- extendedWaitUntil:
+    visible: "Foto selecionada"
+    timeout: 10000
+- takeScreenshot: artifacts/03-publicacao
+- tapOn: "Publicar na semana"
+- assertVisible: "Abrir lembrança de Lia Martins"
+- takeScreenshot: artifacts/04-diario
+- tapOn: "Trocar perfil"
+- tapOn: "Entrar como Caio Lima"
+- tapOn: "Abrir lembrança de Lia Martins"
+- assertVisible: "Lembrança publicada por Lia Martins"
+- takeScreenshot: artifacts/05-amigo-abre-foto
+- tapOn: "Fechar"
+- tapOn: "Trocar perfil"
+- tapOn: "Entrar como Noa Ribeiro"
+- assertVisible: "A semana começa aqui"
+- assertNotVisible: "Abrir lembrança de Lia Martins"
+- takeScreenshot: artifacts/06-sem-acesso

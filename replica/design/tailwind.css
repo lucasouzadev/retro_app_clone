@@ -1,0 +1,36 @@
+/* Mapeamento CSS para Tailwind v4. Importe após Tailwind em um consumidor web. */
+@import "./tokens.css";
+
+@theme inline {
+  --color-diary-bg: var(--color-bg);
+  --color-diary-surface: var(--color-surface);
+  --color-diary-border: var(--color-border);
+  --color-diary-border-input: var(--color-border-input);
+  --color-diary-text: var(--color-text);
+  --color-diary-text-muted: var(--color-text-muted);
+  --color-diary-accent: var(--color-accent);
+  --color-diary-on-accent: var(--color-on-accent);
+  --color-diary-danger: var(--color-danger);
+  --color-diary-success: var(--color-success);
+  --color-diary-warning: var(--color-warning);
+  --text-diary-xs: var(--type-xs);
+  --text-diary-xs--line-height: var(--leading-xs);
+  --text-diary-xs--font-weight: var(--weight-xs);
+  --text-diary-sm: var(--type-sm);
+  --text-diary-sm--line-height: var(--leading-sm);
+  --text-diary-sm--font-weight: var(--weight-sm);
+  --text-diary-base: var(--type-base);
+  --text-diary-base--line-height: var(--leading-base);
+  --text-diary-base--font-weight: var(--weight-base);
+  --text-diary-lg: var(--type-lg);
+  --text-diary-lg--line-height: var(--leading-lg);
+  --text-diary-lg--font-weight: var(--weight-lg);
+  --text-diary-xl: var(--type-xl);
+  --text-diary-xl--line-height: var(--leading-xl);
+  --text-diary-xl--font-weight: var(--weight-xl);
+  --text-diary-display: var(--type-display);
+  --text-diary-display--line-height: var(--leading-display);
+  --text-diary-display--font-weight: var(--weight-display);
+  --font-diary: var(--font-sans);
+  --radius-diary: var(--radius-md);
+}
