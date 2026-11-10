@@ -23,9 +23,27 @@ enum DiaryPalette {
 
 enum DiaryLayout {
     static let gutter: CGFloat = 16
+    static let cardSpacing: CGFloat = 12
+    static let cardRadius: CGFloat = 20
     static let sectionSpacing: CGFloat = 24
     static let maxContent: CGFloat = 520
     static let minimumTarget: CGFloat = 44
+}
+
+struct DiaryCard<Content: View>: View {
+    @ViewBuilder let content: () -> Content
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: DiaryLayout.cardSpacing, content: content)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(DiaryLayout.gutter)
+            .background(DiaryPalette.surface, in: RoundedRectangle(cornerRadius: DiaryLayout.cardRadius))
+            .overlay {
+                RoundedRectangle(cornerRadius: DiaryLayout.cardRadius)
+                    .strokeBorder(DiaryPalette.border)
+                    .allowsHitTesting(false)
+            }
+    }
 }
 
 struct DiaryAction: View {

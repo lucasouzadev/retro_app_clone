@@ -54,17 +54,20 @@ struct DiaryHome: View {
         .sheet(item: $openMemory) { memory in
             NavigationStack {
                 ScrollView {
-                    if let viewer, diary.canRead(memory, as: viewer.id),
-                       let photo = UIImage(data: memory.photo) {
-                        DiaryWeekHeading(title: personName(memory.owner), range: weekLabel(memory.week))
-                        Image(uiImage: photo).resizable().scaledToFit()
-                            .accessibilityLabel("Lembrança publicada por " + personName(memory.owner))
-                    } else {
-                        DiaryFeedback(title: "Lembrança indisponível",
-                                      detail: "Volte às novidades para ver outras semanas.")
+                    VStack(alignment: .leading, spacing: DiaryLayout.sectionSpacing) {
+                        if let viewer, diary.canRead(memory, as: viewer.id),
+                           let photo = UIImage(data: memory.photo) {
+                            authorHeading(memory)
+                            Image(uiImage: photo).resizable().scaledToFit()
+                                .accessibilityLabel("Lembrança publicada por " + personName(memory.owner))
+                        } else {
+                            DiaryFeedback(title: "Lembrança indisponível",
+                                          detail: "Volte às novidades para ver outras semanas.")
+                        }
                     }
+                    .padding(DiaryLayout.gutter)
                 }
-                .padding(DiaryLayout.gutter)
+                .background(DiaryPalette.bg.ignoresSafeArea())
                 .navigationTitle("Lembrança")
                 .toolbar {
                     Button("Fechar") { openMemory = nil }
@@ -81,7 +84,7 @@ struct DiaryHome: View {
                     .frame(maxWidth: DiaryLayout.maxContent)
                     .frame(maxWidth: .infinity)
             }
-            .background(DiaryPalette.bg)
+            .background(DiaryPalette.bg.ignoresSafeArea())
             .foregroundStyle(DiaryPalette.text)
             .navigationTitle(title)
             .toolbar {
@@ -100,28 +103,33 @@ struct DiaryHome: View {
         Group {
             DiaryFeedback(title: "Perfis de demonstração",
                           detail: "Troque de perfil para testar a publicação entre amigos.")
-            ForEach(diary.people) { person in
-                DiaryAction(title: "Entrar como " + person.name, primary: false) { viewer = person }
-            }
-            DiaryField(title: "Seu nome", text: $name)
-            DiaryField(title: "Seu identificador", text: $handle, error: error)
-                .textInputAutocapitalization(.never)
-                .autocorrectionDisabled()
-            DiaryAction(title: "Criar perfil local") {
-                let id = handle.lowercased().trimmingCharacters(in: .whitespacesAndNewlines)
-                let displayName = name.trimmingCharacters(in: .whitespacesAndNewlines)
-                guard id.range(of: "^[a-z0-9_]{3,24}$", options: .regularExpression) != nil,
-                      !diary.people.contains(where: { $0.id == id }),
-                      (1...80).contains(displayName.count) else {
-                    error = "Informe um nome e um identificador único de 3 a 24 letras ASCII, números ou sublinhados."
-                    return
+            DiaryCard {
+                ForEach(diary.people) { person in
+                    DiaryAction(title: "Entrar como " + person.name, primary: false) { viewer = person }
                 }
-                let person = Person(id: id, name: displayName)
-                diary.people.append(person)
-                viewer = person
-                error = nil
-                name = ""
-                handle = ""
+            }
+            DiaryCard {
+                Text("Seu próprio diário").font(.headline).accessibilityAddTraits(.isHeader)
+                DiaryField(title: "Seu nome", text: $name)
+                DiaryField(title: "Seu identificador", text: $handle, error: error)
+                    .textInputAutocapitalization(.never)
+                    .autocorrectionDisabled()
+                DiaryAction(title: "Criar perfil local") {
+                    let id = handle.lowercased().trimmingCharacters(in: .whitespacesAndNewlines)
+                    let displayName = name.trimmingCharacters(in: .whitespacesAndNewlines)
+                    guard id.range(of: "^[a-z0-9_]{3,24}$", options: .regularExpression) != nil,
+                          !diary.people.contains(where: { $0.id == id }),
+                          (1...80).contains(displayName.count) else {
+                        error = "Informe um nome e um identificador único de 3 a 24 letras ASCII, números ou sublinhados."
+                        return
+                    }
+                    let person = Person(id: id, name: displayName)
+                    diary.people.append(person)
+                    viewer = person
+                    error = nil
+                    name = ""
+                    handle = ""
+                }
             }
         }
     }
@@ -135,8 +143,10 @@ struct DiaryHome: View {
             DiaryAction(title: "Encontrar amigos") { tab = 2 }
         }
         ForEach(items) { memory in
-            DiaryWeekHeading(title: personName(memory.owner), range: weekLabel(memory.week))
-            tile(memory)
+            DiaryCard {
+                authorHeading(memory)
+                tile(memory)
+            }
         }
     }
 
@@ -144,16 +154,20 @@ struct DiaryHome: View {
         let week = DiaryState.weekStart(for: .now)
         let items = diary.memories.filter { $0.owner == person.id }
         return Group {
-            DiaryWeekHeading(title: "Esta semana", range: weekLabel(week))
-            if items.isEmpty {
-                DiaryFeedback(title: "Seu diário está em branco",
-                              detail: "Escolha uma foto para começar a guardar suas semanas.")
+            DiaryCard {
+                DiaryWeekHeading(title: "Esta semana", range: weekLabel(week))
+                if items.isEmpty {
+                    DiaryFeedback(title: "Seu diário está em branco",
+                                  detail: "Escolha uma foto para começar a guardar suas semanas.")
+                }
+                DiaryAction(title: "Adicionar lembrança") { draftWeek = week }
+                ForEach(items.filter { $0.week == week }.reversed()) { tile($0) }
             }
-            DiaryAction(title: "Adicionar lembrança") { draftWeek = week }
-            ForEach(items.filter { $0.week == week }.reversed()) { tile($0) }
             ForEach(Array(Set(items.map(\.week))).filter { $0 != week }.sorted(by: >), id: \.self) { past in
-                DiaryWeekHeading(title: "Semana anterior", range: weekLabel(past))
-                ForEach(items.filter { $0.week == past }.reversed()) { tile($0) }
+                DiaryCard {
+                    DiaryWeekHeading(title: "Semana anterior", range: weekLabel(past))
+                    ForEach(items.filter { $0.week == past }.reversed()) { tile($0) }
+                }
             }
         }
     }
@@ -181,20 +195,31 @@ struct DiaryHome: View {
                               detail: "Busque um identificador para enviar um convite.")
             }
             ForEach(links) { link in
-                let received = link.recipient == person.id
-                let other = personName(received ? link.sender : link.recipient)
-                DiaryWeekHeading(title: other, range: link.accepted ? "Amizade" :
-                                 received ? "Pedido recebido" : "Pedido enviado")
-                if received && !link.accepted {
-                    DiaryAction(title: "Aceitar pedido de " + other) {
-                        diary.accept(link.id, as: person.id)
+                DiaryCard {
+                    let received = link.recipient == person.id
+                    let other = personName(received ? link.sender : link.recipient)
+                    DiaryWeekHeading(title: other, range: link.accepted ? "Amizade" :
+                                     received ? "Pedido recebido" : "Pedido enviado")
+                    if received && !link.accepted {
+                        DiaryAction(title: "Aceitar pedido de " + other) {
+                            diary.accept(link.id, as: person.id)
+                        }
+                    }
+                    DiaryAction(title: link.accepted ? "Desfazer amizade" :
+                                received ? "Recusar pedido" : "Cancelar pedido", primary: false) {
+                        diary.remove(link.id, as: person.id)
                     }
                 }
-                DiaryAction(title: link.accepted ? "Desfazer amizade" :
-                            received ? "Recusar pedido" : "Cancelar pedido", primary: false) {
-                    diary.remove(link.id, as: person.id)
-                }
             }
+        }
+    }
+
+    private func authorHeading(_ memory: Memory) -> some View {
+        let name = personName(memory.owner)
+        let initials = name.split(separator: " ").prefix(2).compactMap(\.first)
+        return HStack(spacing: DiaryLayout.cardSpacing) {
+            DiaryAvatar(initials: String(initials).uppercased())
+            DiaryWeekHeading(title: name, range: weekLabel(memory.week))
         }
     }
 
@@ -234,14 +259,16 @@ private struct PublishPhoto: View {
         NavigationStack {
             ScrollView {
                 VStack(alignment: .leading, spacing: DiaryLayout.sectionSpacing) {
-                    DiaryWeekHeading(title: "Guardar lembrança", range: weekLabel(week))
-                    PhotosPicker(selection: $selection, matching: .images) {
-                        Label("Escolher foto", systemImage: "photo.on.rectangle")
-                            .frame(minHeight: DiaryLayout.minimumTarget)
-                    }
-                    if let photo, let image = UIImage(data: photo) {
-                        Image(uiImage: image).resizable().scaledToFit()
-                            .accessibilityLabel("Foto selecionada")
+                    DiaryCard {
+                        DiaryWeekHeading(title: "Guardar lembrança", range: weekLabel(week))
+                        PhotosPicker(selection: $selection, matching: .images) {
+                            Label("Escolher foto", systemImage: "photo.on.rectangle")
+                                .frame(minHeight: DiaryLayout.minimumTarget)
+                        }
+                        if let photo, let image = UIImage(data: photo) {
+                            Image(uiImage: image).resizable().scaledToFit()
+                                .accessibilityLabel("Foto selecionada")
+                        }
                     }
                     if loading { ProgressView("Preparando foto") }
                     if let error {
@@ -254,6 +281,7 @@ private struct PublishPhoto: View {
                 }
                 .padding(DiaryLayout.gutter)
             }
+            .background(DiaryPalette.bg.ignoresSafeArea())
             .navigationTitle("Nova lembrança")
             .toolbar { Button("Cancelar") { dismiss() } }
         }
